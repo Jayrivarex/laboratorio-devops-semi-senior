@@ -1,0 +1,56 @@
+name: Reusable Deployment Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment_name:
+        description: 'Entorno de destino (ej. dev, qa, prod)'
+        required: true
+        type: string
+    secrets:
+      SWA_TOKEN:
+        required: true
+      KUBE_CONFIG:
+        required: true
+
+jobs:
+  deploy-static-web-app:
+    name: Deploy to Azure SWA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Build and Deploy to SWA
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.SWA_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/"
+
+  deploy-kubernetes:
+    name: Deploy to Azure AKS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Execute Composite Action
+        uses: ./.github/actions/setup-tools
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Deploy Workload to AKS
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+          
+          # Genera y aplica un manifiesto básico de Pod NGINX
+          kubectl run nginx-demo --image=nginx:alpine --port=80 --restart=Always --dry-run=client -o yaml > pod.yaml
+          kubectl apply -f pod.yaml
+          
+          # Muestra el estado del pod
+          kubectl get pods -o wide

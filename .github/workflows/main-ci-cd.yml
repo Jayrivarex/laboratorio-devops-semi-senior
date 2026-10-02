@@ -1,0 +1,15 @@
+name: Main CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  call-reusable-deployment:
+    name: Trigger Deployments
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      environment_name: 'production'
+    secrets:
+      SWA_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WITTY_PEBBLE_03B2BF71E }}
+      KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
